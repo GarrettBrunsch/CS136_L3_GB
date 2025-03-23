@@ -1,0 +1,43 @@
+#VALID TESTS:
+CASE #1: (balanced parentheses)
+CASE #2: {balanced curly braces}
+CASE #3: [balanced square brackets]
+CASE #4: <!--balanced HTML comments-->
+CASE #5: /balanced C-style comments/
+CASE #6: "balanced double quotes"
+CASE #7: 'a' (single quote with one char)
+CASE #8: '' (empty single quotes)
+CASE #9: {outer [inner (complex nesting)]}
+CASE #10: ([{}]) (mixing different symbols)
+CASE #11: "Text with (parens) and {braces}" (mixed content)
+CASE #12: <!-- "quoted" text --> (quotes in comments)
+CASE #13: (){}[] (empty expressions with symbols)
+CASE #14: No symbols at all in this line
+CASE #15: ()[]{}""''<!---->// (consecutive symbols)
+CASE #16: (one) {two} [three] (multiple matches)
+CASE #17: " spaced out " (whitespace in quotes)
+CASE #18: (({{[[]]}})) (consecutive similar symbols)
+CASE #19: Test under 60 chars (length is fine)
+CASE #20: <!-- Nested /* comments */ inside --> (test)
+CASE #21: "outer 'a' quote" (nested quotes)
+CASE #22: (Deeper{nested[content]}) (case)
+#INVALID TESTS:
+CASE #23: {["'('')]} (unbalanced quotes)
+CASE #24: '\'' (single quotes with unmatched quotes)
+CASE #25: "\"" (double quotes with unmatched quotes)
+CASE #26: (){}"'<!---->// (adjacent different unbalanced symbols)
+CASE #27: "'"'" (multiple unmatched quotes)
+CASE #28: (imbalanced parentheses
+CASE #29: {imbalanced curly braces
+CASE #30: [imbalanced brackets
+CASE #31: <!--imbalanced HTML comments
+CASE #32: /*imbalanced C-style comments
+CASE #33: "imbalanced double quotes
+CASE #34: 'abc' (multiple chars in single quotes)
+CASE #35: {first [second} third] (improper nesting)
+CASE #36: ([{< (mixing different unclosed symbols)
+CASE #37: " (unterminated quote at end)
+CASE #38: <!-- (unterminated comment at end)
+CASE #39: ([)] (improper order of closing symbols)
+CASE #40: ([{)]}" (multiple mismatches)
+CASE #41: Test exceeding max length of 60 chars should trigger error message for being too long for processing
