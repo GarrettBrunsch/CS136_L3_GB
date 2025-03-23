@@ -21,6 +21,17 @@ struct StackItem
     StackItem(char type, int pos);
 };
 
+struct SymbolHandler
+{
+    string symbol = "";
+    char matchKey = '\0';
+    bool isOpening = false;
+
+    SymbolHandler() {};
+    SymbolHandler(const string& sym, char key, bool opening);
+
+};
+
 class Stack
 {
 private:
@@ -35,17 +46,6 @@ public:
     bool push(const StackItem& item);
     bool pop(StackItem& item);
     bool peek(StackItem& item) const;
-};
-
-struct SymbolHandler
-{
-    string symbol = "";
-    char matchKey = '\0';
-    bool isOpening = false;
-
-    SymbolHandler() {};
-    SymbolHandler(const string& sym, char key, bool opening);
-
 };
 
 void initSymbolHandlers(SymbolHandler handlers[], int& count);
@@ -63,7 +63,7 @@ int processFoundSymbol(const string& expr, int pos, const string& symbol, Symbol
 
 bool detectSymbolAtPosition(const string& expr, int pos, const SymbolHandler symbolHandlers[],
     int handlerCount, string& foundSymbol, int& handlerIndex);
-bool readFile(const string& FILENAME, string expressions[], int& count);
+bool readFile(ifstream& inputFile, string expressions[], int& count, const int MAX_EXP_SIZE);
 
 int main()
 {
@@ -95,7 +95,6 @@ int main()
 
 }
 
-// Constructor implementations
 StackItem::StackItem(char type, int pos) : symbolType(type), position(pos) {}
 SymbolHandler::SymbolHandler(const string& sym, char key, bool opening)
     : symbol(sym), matchKey(key), isOpening(opening) {}
@@ -105,7 +104,7 @@ void initSymbolHandlers(SymbolHandler handlers[], int& count)
     count = 0;
 
     // Pre-determined set of symbols being (x), {x}, [x], <!-- x -->, 'x', "x", and /*x*/
-    // Format: input, key, skipLength, isOpening
+    // Format: input, key, isOpening
     handlers[count++] = SymbolHandler("(", '(', true);
     handlers[count++] = SymbolHandler("{", '{', true);
     handlers[count++] = SymbolHandler("[", '[', true);
@@ -180,44 +179,53 @@ bool Stack::peek(StackItem& item) const
 
 void processFile()
 {
-    const int MAX_EXPRESSIONS = 100;
+    const int MAX_EXPRESSIONS_SIZE = 100; // Processess in chunks of X size to allow for "unlimited" entries without DMA
     const int MAX_EXPRESSION_LENGTH = 60;
     const string FILENAME = "expressions.txt";
 
-    string expressions[MAX_EXPRESSIONS] = {};
-    string symbolsArray[MAX_EXPRESSIONS] = {};
-    bool balancedArray[MAX_EXPRESSIONS] = {};
+    string expressions[MAX_EXPRESSIONS_SIZE] = {};
+    string symbolsArray[MAX_EXPRESSIONS_SIZE] = {};
+    bool balancedArray[MAX_EXPRESSIONS_SIZE] = {};
     int expressionCount = 0;
-    bool readSuccess = false;
-
+    int totalProcessed = 0;
+    bool readSuccess = true;
+    bool hasMoreData = true;
 
     cout << "Reading expressions from file: " << FILENAME << "\n";
+    ifstream inputFile(FILENAME);
 
-    readSuccess = readFile(FILENAME, expressions, expressionCount);
-
-    if (readSuccess && expressionCount <= MAX_EXPRESSIONS)
+    if (inputFile.is_open())
     {
-        cout << "Successfully read " << expressionCount << " expressions from file\n\n";
-
-        for (int i = 0; i < expressionCount; i++)
+        while (hasMoreData && readSuccess)
         {
-            if (expressions[i].length() > MAX_EXPRESSION_LENGTH)
-            {
-                symbolsArray[i] = "ERROR: Entry must be < 60 chars";
-                balancedArray[i] = false;
-            }
-            else
-            {
-                analyzeExprSymbols(expressions[i], symbolsArray[i], balancedArray[i]);
+            expressionCount = 0;
+            readSuccess = readFile(inputFile, expressions, expressionCount, MAX_EXPRESSIONS_SIZE);
+            hasMoreData = (expressionCount > 0);
 
+            if (expressionCount > 0)
+            {
+                for (int i = 0; i < expressionCount; i++)
+                {
+                    if (expressions[i].length() > MAX_EXPRESSION_LENGTH)
+                    {
+                        symbolsArray[i] = "ERROR: Entry must be < 60 chars";
+                        balancedArray[i] = false;
+                    }
+                    else
+                    {
+                        analyzeExprSymbols(expressions[i], symbolsArray[i], balancedArray[i]);
+                    }
+                }
+                displayResults(expressions, symbolsArray, balancedArray, expressionCount);
+                totalProcessed += expressionCount;
             }
         }
-        displayResults(expressions, symbolsArray, balancedArray, expressionCount);
-    }
-    else if (readSuccess && expressionCount > MAX_EXPRESSIONS)
-    {
-        cout << "Error: File contains too many expressions (more than " << MAX_EXPRESSIONS << ")\n"
-            "Please reduce the number of expressions in the file and try again\n";
+
+        inputFile.close(); // Handled here instead of readFile so that data can be processed in pieces
+        if (totalProcessed > 0)
+        {
+            cout << "Successfully processed " << totalProcessed << " expressions from file\n";
+        }
     }
     else
     {
@@ -225,26 +233,25 @@ void processFile()
     }
 }
 
-bool readFile(const string& FILENAME, string expressions[], int& count)
+bool readFile(ifstream& inputFile, string expressions[], int& count, const int MAX_EXP_SIZE)
 {
-    bool success = false;
-    ifstream inputFile(FILENAME);
+    bool success = true;
     count = 0;
+    string line = "";
 
-    if (inputFile.is_open())
+    if (inputFile.is_open() && !inputFile.eof())
     {
-        string line = "";
-
-        while (getline(inputFile, line) && count < 100)
+        while (getline(inputFile, line) && count < MAX_EXP_SIZE)
         {
             if (!line.empty())
             {
                 expressions[count++] = line;
             }
         }
-
-        inputFile.close();
-        success = true;
+    }
+    else
+    {
+        success = false;
     }
     return success;
 }
@@ -608,6 +615,7 @@ Successfully read 43 expressions from file
         | or message for being t |                           |             |
         | oo long for processing |                           |             |
         -------------------------------------------------------------------
+        Successfully processed 43 expressions from file
 
 
      --- Main Menu ---
